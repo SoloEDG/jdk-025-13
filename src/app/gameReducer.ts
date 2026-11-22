@@ -11,6 +11,7 @@ import {
 } from "../features/exploration";
 import { inspectCell, activateShield } from "../features/tools";
 import { settle } from "../features/chronicle";
+import { verifyProof } from "../features/proof";
 export function initialGame(): Workspace {
   return {
     doc: {
@@ -36,12 +37,14 @@ export function gameReducer(state: Workspace, c: Command): Workspace {
         doc: {
           ...state.doc,
           expedition: createExpedition(
-            blankBoard(c.difficulty, seed),
+            blankBoard(c.difficulty, seed, c.proved),
             crypto.randomUUID(),
             Date.now(),
           ),
         },
-        notice: "新的石板地图已准备好，第一步由你决定。",
+        notice: c.proved
+          ? "无猜测探险已就绪，第一步将触发地图推演与证明。"
+          : "新的石板地图已准备好，第一步由你决定。",
       };
     }
     case "mode":
@@ -69,6 +72,106 @@ export function gameReducer(state: Workspace, c: Command): Workspace {
     case "chord":
       e = chordCells(e, c.id);
       break;
+    case "prove-progress":
+      if (e.proving && e.proving.token === c.token)
+        e = { ...e, proving: { ...e.proving, attempts: c.attempts } };
+      break;
+    case "prove-cancel":
+      if (e.proving || e.proofFailure)
+        return {
+          ...state,
+          doc: {
+            ...state.doc,
+            expedition: { ...e, proving: null, proofFailure: null },
+          },
+          notice: "已取消推演，地图仍未布雷，可重新选择首步。",
+        };
+      break;
+    case "prove-retry":
+      if (e.proofFailure && !e.board.generated)
+        e = {
+          ...e,
+          proofFailure: null,
+          proofRound: e.proofRound + 1,
+          proving: {
+            first: e.proofFailure.first,
+            token: (e.proving?.token ?? 0) + 1,
+            attempts: 0,
+          },
+        };
+      break;
+    case "prove-random": {
+      if (!e.proofFailure || e.board.generated) break;
+      const first = e.proofFailure.first;
+      const board = generateBoard({ ...e.board, proved: false }, first);
+      e = revealCells(
+        {
+          ...e,
+          board,
+          proof: null,
+          proving: null,
+          proofFailure: null,
+          status: "active",
+        },
+        [first],
+      );
+      return {
+        ...state,
+        doc: { ...state.doc, expedition: e },
+        notice: "已改用随机地图，本局不附带无猜测证明。",
+      };
+    }
+    case "prove-fail":
+      if (e.proving && e.proving.token === c.token)
+        e = {
+          ...e,
+          proving: null,
+          proofFailure: {
+            first: e.proving.first,
+            attempts: c.attempts,
+            budget: c.attempts,
+          },
+        };
+      break;
+    case "prove-done": {
+      // 令牌校验：取消、改首步或换局之后，旧任务的结果一律作废
+      if (!e.proving || e.proving.token !== c.token || e.board.generated)
+        break;
+      const first = e.proving.first;
+      const sameMap =
+        c.board.proved &&
+        c.board.generated &&
+        c.board.seed === e.board.seed &&
+        c.board.difficulty === e.board.difficulty &&
+        c.board.width === e.board.width &&
+        c.board.height === e.board.height &&
+        c.board.mines === e.board.mines;
+      if (!sameMap || !verifyProof(c.board, c.proof))
+        return {
+          ...state,
+          doc: {
+            ...state.doc,
+            expedition: { ...e, proving: null },
+          },
+          notice: "候选地图未通过证明复核，请重新选择首步。",
+        };
+      e = revealCells(
+        {
+          ...e,
+          board: c.board,
+          proof: c.proof,
+          proving: null,
+          proofFailure: null,
+          status: "active",
+        },
+        [first],
+      );
+      return {
+        ...state,
+        doc: { ...state.doc, expedition: e },
+        notice: `无猜测地图已确认：第 ${c.proof.attempts} 个候选通过证明，全程可靠数字与道具解开。`,
+      };
+    }
     case "cell": {
       const cell = e.board.cells[c.id];
       if (!mayAct(e) || !cell) break;
@@ -84,8 +187,22 @@ export function gameReducer(state: Workspace, c: Command): Workspace {
           : result.expedition;
         break;
       }
-      if (!e.board.generated)
+      if (!e.board.generated) {
+        if (e.board.proved) {
+          // 无猜测模式：首步（或改首步）触发异步推演，令牌随任务递增
+          e = {
+            ...e,
+            proofFailure: null,
+            proving: {
+              first: c.id,
+              token: (e.proving?.token ?? 0) + 1,
+              attempts: 0,
+            },
+          };
+          break;
+        }
         e = { ...e, status: "active", board: generateBoard(e.board, c.id) };
+      }
       e = revealCells(e, [c.id]);
       break;
     }

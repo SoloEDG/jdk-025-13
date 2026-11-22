@@ -1,4 +1,4 @@
-import { X, Pickaxe, Flag, ScanSearch } from "lucide-react";
+import { X, Pickaxe, Flag, ScanSearch, ScrollText } from "lucide-react";
 export function GuideDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -41,6 +41,13 @@ export function GuideDialog({ onClose }: { onClose: () => void }) {
           <p>
             <strong>有限道具</strong>
             探针确认一格但不揭开；火把安全揭开或确认危险；守护符石抵挡一次伤害。信息会进入推断；推断仍以你插的旗标为条件。
+          </p>
+        </div>
+        <div className="guide-step">
+          <ScrollText />
+          <p>
+            <strong>无猜测探险</strong>
+            出发时可选。系统按预算逐个检验候选布局，只留下能凭公开数字与道具预算完整解开的地图，并给出可逐步展开的证明：何时推导、何时花道具，都可复算。证明不读取隐藏答案，也不依赖你的旗标。若预算内找不到，可扩大预算重试或改用随机地图。
           </p>
         </div>
         <p className="guide-foot">

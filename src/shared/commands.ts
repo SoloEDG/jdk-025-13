@@ -1,4 +1,4 @@
-import type { Difficulty, Mode } from "./types";
+import type { Difficulty, Mode, Board, Proof } from "./types";
 export type Command =
   | { type: "cell"; id: number; mark?: boolean }
   | { type: "chord"; id: number }
@@ -7,4 +7,10 @@ export type Command =
   | { type: "pause"; paused?: boolean }
   | { type: "tick" }
   | { type: "extract" }
-  | { type: "new"; difficulty: Difficulty; seed: string };
+  | { type: "new"; difficulty: Difficulty; seed: string; proved: boolean }
+  | { type: "prove-progress"; token: number; attempts: number }
+  | { type: "prove-done"; token: number; board: Board; proof: Proof }
+  | { type: "prove-fail"; token: number; attempts: number }
+  | { type: "prove-cancel" }
+  | { type: "prove-retry" }
+  | { type: "prove-random" };

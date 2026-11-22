@@ -2413,3 +2413,229 @@ footer > span:last-child {
     animation: notice-out 1ms 6s forwards !important;
   }
 }
+
+/* ---- 无猜测证明 ---- */
+.proof-panel {
+  background: #223226;
+  border: 1px solid #4c5a3c;
+  padding: 18px 16px;
+  border-radius: 4px;
+}
+.proof-panel .panel-heading > span {
+  font-size: 6px;
+  letter-spacing: 0.8px;
+}
+.proof-status {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 0 10px;
+}
+.proof-status > svg {
+  color: #9fc48d;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.proof-status.bad > svg {
+  color: #d4a073;
+}
+.proof-status p {
+  font-size: 9px;
+  line-height: 1.9;
+  color: #9eaf8c;
+}
+.proof-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 7px;
+  color: #6d8965;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #39492f;
+}
+.proof-steps {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+.proof-steps li {
+  border-bottom: 1px solid #2e3f2a;
+}
+.proof-step-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  padding: 8px 2px;
+  text-align: left;
+  font-size: 8px;
+  color: #a9bb8e;
+}
+.proof-step-head:hover {
+  color: #cfd8ae;
+}
+.proof-step-head > span {
+  flex: 1;
+  line-height: 1.7;
+}
+.proof-step-head b {
+  font-weight: 500;
+}
+.proof-step-head > svg {
+  flex-shrink: 0;
+  color: #6d8965;
+  transition: transform 0.15s;
+}
+.proof-steps li.open .proof-step-head > svg {
+  transform: rotate(180deg);
+}
+.step-kind {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: #2c4030;
+  color: #9fc48d;
+}
+.step-kind.kind-tool {
+  background: #41391f;
+  color: #c9b273;
+}
+.step-kind.kind-start {
+  background: #31442a;
+  color: #b6c896;
+}
+.proof-step-body {
+  padding: 4px 2px 12px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.proof-step-body p {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 8px;
+  line-height: 1.8;
+  color: #8fa377;
+  flex-wrap: wrap;
+}
+.proof-step-body small {
+  display: block;
+  width: 100%;
+  color: #687f5f;
+  font-size: 7px;
+}
+.coord-chip {
+  background: #172c1d70;
+  border: 1px solid #405333;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 7px;
+  font-family: var(--mono);
+  color: #a9c08b;
+  flex-shrink: 0;
+}
+.coord-chip:hover {
+  border-color: #a6ac76;
+}
+.proof-opened .chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.proof-caution {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+  font-size: 7px;
+  line-height: 1.8;
+  color: #687f5f;
+  margin-top: 13px;
+}
+.proving-overlay .outline-button {
+  border-color: #6d7c50;
+  color: #b9c494;
+}
+.mode-choice {
+  border: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mode-choice legend {
+  font-size: 10px;
+  color: #a4b48b;
+  padding: 0;
+  margin-bottom: 9px;
+}
+.mode-choice label {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  border: 1px solid #506241;
+  background: #16291c;
+  padding: 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 10px;
+  color: #b8c59b;
+}
+.mode-choice label.active {
+  border-color: #a6ac76;
+  background: #1d3122;
+}
+.mode-choice input {
+  accent-color: #b8a16a;
+  margin: 0;
+}
+.mode-choice svg {
+  color: #9aa86f;
+  flex-shrink: 0;
+}
+.mode-choice strong {
+  display: block;
+  font-weight: 500;
+}
+.mode-choice small {
+  display: block;
+  font-size: 8px;
+  color: #7f9872;
+  margin-top: 4px;
+  line-height: 1.7;
+}
+.dialog-actions.vertical {
+  flex-direction: column;
+}
+.dialog-actions.vertical .primary,
+.dialog-actions.vertical .outline-button {
+  width: 100%;
+}
+.proof-verdict {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 8px;
+  color: #8b9a78;
+}
+.proof-verdict.proved {
+  color: #b6d19b;
+}
+
+/* 推演遮罩不拦截点击：生成期间可直接改点首步 */
+.proving-overlay {
+  pointer-events: none;
+  background: #17271bd8;
+}
+.proving-overlay button {
+  pointer-events: auto;
+}

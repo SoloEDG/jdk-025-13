@@ -4,6 +4,7 @@ import {
   Footprints,
   Gem,
   TriangleAlert,
+  BadgeCheck,
 } from "lucide-react";
 import type { Report } from "../../../shared/types";
 export function ResultPanel({
@@ -44,6 +45,12 @@ export function ResultPanel({
           <TriangleAlert size={13} />
           触发陷阱 {report.mistakes}
         </span>
+      </p>
+      <p className={"proof-verdict " + (report.proved ? "proved" : "")}>
+        <BadgeCheck size={13} />
+        {report.proved
+          ? "有证明的探险：本局地图附带无猜测证明，全程可凭数字与道具推导。"
+          : "随机地图探险：本局不附带无猜测证明。"}
       </p>
       <button className="primary" onClick={onNew}>
         开启新的探险

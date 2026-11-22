@@ -21,6 +21,7 @@ export function expeditionReport(e: Expedition, now: number): Report {
     seconds: e.elapsed,
     used: e.used,
     mistakes: e.mistakes,
+    proved: e.board.proved && !!e.proof,
     endedAt: now,
   };
 }

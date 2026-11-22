@@ -11,9 +11,11 @@ import {
   LogOut,
   X,
   Save,
+  ScrollText,
 } from "lucide-react";
 import type { Difficulty } from "../shared/types";
 import { isTerminal } from "../shared/initial";
+import { coordinate } from "../shared/geometry";
 import {
   RegionPanel,
   BoardView,
@@ -24,6 +26,7 @@ import { ActionBar, ProgressStrip } from "../features/exploration";
 import { analyze, InferencePanel } from "../features/inference";
 import { ToolPanel } from "../features/tools";
 import { ChroniclePanel, ResultPanel } from "../features/chronicle";
+import { ProofPanel, proofBudget } from "../features/proof";
 import { useGame } from "./useGame";
 import { GuideDialog } from "./ui/GuideDialog";
 import { LaunchDialog } from "./ui/LaunchDialog";
@@ -150,6 +153,17 @@ export function App() {
             </div>
           </div>
           <aside className="right-column">
+            {e.board.proved && e.proof && (
+              <ProofPanel
+                expedition={e}
+                onLocate={(id) => {
+                  document.getElementById("tile-" + id)?.focus();
+                  document
+                    .getElementById("tile-" + id)
+                    ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                }}
+              />
+            )}
             <InferencePanel
               analysis={analysis}
               expedition={e}
@@ -191,12 +205,53 @@ export function App() {
           difficulty={launch}
           ongoing={!isTerminal(e.status) && e.board.generated}
           onClose={() => setLaunch(null)}
-          onConfirm={(difficulty, seed) => {
-            send({ type: "new", difficulty, seed });
+          onConfirm={(difficulty, seed, proved) => {
+            send({ type: "new", difficulty, seed, proved });
             setLaunch(null);
             setHints(false);
           }}
         />
+      )}
+      {e.proofFailure && (
+        <div className="modal-backdrop">
+          <section
+            className="dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="fail-title"
+          >
+            <span className="eyebrow">PROOF SEARCH EXHAUSTED</span>
+            <h2 id="fail-title">搜索预算内未找到可证明布局。</h2>
+            <p className="dialog-note">
+              以 {coordinate(e.proofFailure.first, e.board.width)} 为首步，
+              已在 {e.proofFailure.attempts} 个候选布局的预算内完成搜索，
+              没有任何候选通过完整证明。可以扩大预算继续推演、改用随机地图，
+              或重新选择首步。
+            </p>
+            <div className="dialog-actions vertical">
+              <button
+                className="primary"
+                autoFocus
+                onClick={() => send({ type: "prove-retry" })}
+              >
+                <ScrollText size={14} />
+                扩大预算重试（{proofBudget(e.proofRound + 1)} 个候选）
+              </button>
+              <button
+                className="outline-button"
+                onClick={() => send({ type: "prove-random" })}
+              >
+                改用随机地图（不附带证明）
+              </button>
+              <button
+                className="outline-button"
+                onClick={() => send({ type: "prove-cancel" })}
+              >
+                重新选择首步
+              </button>
+            </div>
+          </section>
+        </div>
       )}
       {extract && (
         <div className="modal-backdrop" onClick={() => setExtract(false)}>

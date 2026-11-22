@@ -1,5 +1,13 @@
 import { useRef, useState } from "react";
-import { Pause, Play, MapPin, Maximize2, Flag, Gem } from "lucide-react";
+import {
+  Pause,
+  Play,
+  MapPin,
+  Maximize2,
+  Flag,
+  Gem,
+  ScrollText,
+} from "lucide-react";
 import type { Analysis, Expedition } from "../../../shared/types";
 import type { Command } from "../../../shared/commands";
 import { isTerminal } from "../../../shared/initial";
@@ -145,9 +153,31 @@ export function BoardView({
           <MapPin size={10} />
           北纬 24° 16′ · 东经 102° 32′<span>比例 1 : 100</span>
         </div>
-        {e.status === "ready" && (
+        {e.status === "ready" && !e.proving && (
           <div className="first-step">
-            点击任意石板，开始探险<span>首步及周围八格始终安全</span>
+            点击任意石板，开始探险
+            <span>
+              {e.board.proved
+                ? "首步及周围八格始终安全 · 随后开始无猜测推演"
+                : "首步及周围八格始终安全"}
+            </span>
+          </div>
+        )}
+        {e.proving && (
+          <div className="pause-overlay proving-overlay">
+            <ScrollText size={34} />
+            <h3>正在推演无猜测地图</h3>
+            <p>
+              已检验 {e.proving.attempts} 个候选布局，每个候选都须通过完整证明。
+              <br />
+              点击其他石板可改换首步重新推演。
+            </p>
+            <button
+              className="outline-button"
+              onClick={() => send({ type: "prove-cancel" })}
+            >
+              取消推演
+            </button>
           </div>
         )}
         {e.paused && (

@@ -4,15 +4,81 @@ import type {
   Archive,
   Board,
   Report,
+  Proof,
 } from "../shared/types";
 import { neighbors } from "../shared/geometry";
 import { region } from "../features/terrain";
+import { verifyProof } from "../features/proof";
 import { initialGame } from "./gameReducer";
 const key = "ruinfield-jdk025-v1";
 const obj = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 const int = (v: unknown, min = 0) =>
   typeof v === "number" && Number.isInteger(v) && v >= min;
+const PROOF_RULES = [
+  "protect",
+  "flood",
+  "remaining-zero",
+  "all-danger",
+  "subset",
+  "global-mines",
+  "global-safe",
+  "intel",
+];
+function validProof(v: unknown, cells: number): v is Proof {
+  if (
+    !obj(v) ||
+    v.version !== 1 ||
+    !int(v.first) ||
+    Number(v.first) >= cells ||
+    !int(v.attempts, 1) ||
+    Number(v.attempts) > 100000 ||
+    !obj(v.budget) ||
+    !Array.isArray(v.steps) ||
+    !v.steps.length ||
+    v.steps.length > 500
+  )
+    return false;
+  const b = v.budget;
+  if (!int(b.probe) || Number(b.probe) > 2 || !int(b.flare) || Number(b.flare) > 1)
+    return false;
+  const ids = (x: unknown) =>
+    Array.isArray(x) &&
+    x.length <= cells &&
+    x.every((i) => int(i) && Number(i) < cells);
+  return v.steps.every((s, i) => {
+    if (
+      !obj(s) ||
+      s.id !== i + 1 ||
+      !["start", "deduce", "tool"].includes(String(s.kind)) ||
+      !(s.tool === null || s.tool === "probe" || s.tool === "flare") ||
+      !(s.result === null || s.result === "safe" || s.result === "danger") ||
+      !(
+        s.left === null ||
+        (obj(s.left) && int(s.left.probe) && int(s.left.flare))
+      ) ||
+      !ids(s.safe) ||
+      !ids(s.danger) ||
+      !ids(s.opened) ||
+      !Array.isArray(s.reasons) ||
+      s.reasons.length > cells * 2 ||
+      typeof s.text !== "string" ||
+      s.text.length > 300
+    )
+      return false;
+    return s.reasons.every(
+      (r) =>
+        obj(r) &&
+        int(r.cell) &&
+        Number(r.cell) < cells &&
+        PROOF_RULES.includes(String(r.rule)) &&
+        ids(r.sources) &&
+        ids(r.facts) &&
+        typeof r.text === "string" &&
+        r.text.length <= 300,
+    );
+  });
+}
 function validBoard(v: unknown): v is Board {
   if (
     !obj(v) ||
@@ -20,7 +86,8 @@ function validBoard(v: unknown): v is Board {
     typeof v.seed !== "string" ||
     v.seed.length > 40 ||
     typeof v.generated !== "boolean" ||
-    !Array.isArray(v.cells)
+    !Array.isArray(v.cells) ||
+    ("proved" in v && typeof v.proved !== "boolean")
   )
     return false;
   const r = region(v.difficulty as Board["difficulty"]);
@@ -136,6 +203,13 @@ function validExpedition(v: unknown): v is Expedition {
     return false;
   const e = v as unknown as Expedition;
   const safe = e.board.cells.filter((c) => c.revealed && !c.mine).length;
+  // 证明与地图必须一致：无猜测地图须附带能通过逐步复核的证明；
+  // 普通地图不得夹带证明；未布雷的地图不可能已有证明。
+  const proved = e.board.proved === true;
+  if (proved) {
+    if (!validProof(e.proof, e.board.cells.length)) return false;
+    if (!verifyProof(e.board, e.proof)) return false;
+  } else if (e.proof !== undefined && e.proof !== null) return false;
   return (
     (e.status === "ready") === !e.board.generated &&
     (e.status !== "won" || safe === e.board.cells.length - e.board.mines) &&
@@ -161,7 +235,8 @@ function validReport(v: unknown): v is Report {
     ].every((k) => int(v[k])) &&
     Number(v.safe) <= Number(v.totalSafe) &&
     Array.isArray(v.relics) &&
-    v.relics.every((r) => ["sun", "vessel", "tablet"].includes(String(r)))
+    v.relics.every((r) => ["sun", "vessel", "tablet"].includes(String(r))) &&
+    !("proved" in v && typeof v.proved !== "boolean")
   );
 }
 function validArchive(v: unknown): v is Archive {
@@ -188,11 +263,21 @@ export function loadGame() {
       v.version === 1 &&
       validExpedition(v.expedition) &&
       validArchive(v.archive)
-    )
+    ) {
+      const doc = v as unknown as GameDocument;
+      // 兼容旧存档：补齐新增字段；推演任务与失败提示属于瞬态，不恢复
+      const ex = doc.expedition;
+      ex.board.proved ??= false;
+      ex.proof ??= null;
+      ex.proving = null;
+      ex.proofFailure = null;
+      ex.proofRound ??= 0;
+      for (const r of doc.archive.reports) r.proved ??= false;
       return {
-        doc: v as unknown as GameDocument,
+        doc,
         notice: "已恢复上次探险，地图、道具与推断信息保持原样。",
       };
+    }
     return {
       ...initialGame(),
       notice: "存档格式或地图校验未通过，已保留原存档并开启临时探险。",
@@ -208,7 +293,12 @@ export function loadGame() {
 }
 export function saveGame(doc: GameDocument) {
   try {
-    localStorage.setItem(key, JSON.stringify(doc));
+    // 推演任务与失败提示不持久化：刷新后回到待出发状态，可重新推演
+    const clean: GameDocument = {
+      ...doc,
+      expedition: { ...doc.expedition, proving: null, proofFailure: null },
+    };
+    localStorage.setItem(key, JSON.stringify(clean));
     return true;
   } catch {
     return false;

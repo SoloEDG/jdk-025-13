@@ -2,7 +2,11 @@ import type { Board, Difficulty } from "../../../shared/types";
 import { neighbors } from "../../../shared/geometry";
 import { seedHash, shuffled } from "../../../shared/random";
 import { region } from "../model/regions";
-export function blankBoard(difficulty: Difficulty, seed: string): Board {
+export function blankBoard(
+  difficulty: Difficulty,
+  seed: string,
+  proved = false,
+): Board {
   const r = region(difficulty);
   return {
     width: r.width,
@@ -11,6 +15,7 @@ export function blankBoard(difficulty: Difficulty, seed: string): Board {
     seed,
     difficulty,
     generated: false,
+    proved,
     cells: Array.from({ length: r.width * r.height }, (_, id) => ({
       id,
       mine: false,
@@ -23,21 +28,21 @@ export function blankBoard(difficulty: Difficulty, seed: string): Board {
     })),
   };
 }
-export function generateBoard(board: Board, first: number): Board {
+export function generateBoard(board: Board, first: number, salt = ""): Board {
   const excluded = new Set([
     first,
     ...neighbors(first, board.width, board.height),
   ]);
   const candidates = shuffled(
     board.cells.map((c) => c.id).filter((id) => !excluded.has(id)),
-    seedHash(board.seed),
+    seedHash(board.seed + salt),
   );
   const hazards = new Set(candidates.slice(0, board.mines));
   const safe = shuffled(
     board.cells
       .map((c) => c.id)
       .filter((id) => !hazards.has(id) && id !== first),
-    seedHash(board.seed + "relic"),
+    seedHash(board.seed + salt + "relic"),
   );
   const relics = new Map(
     safe

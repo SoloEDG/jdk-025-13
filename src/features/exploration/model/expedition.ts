@@ -20,6 +20,10 @@ export function createExpedition(
     nextAction: 1,
     selected: null,
     startedAt: now,
+    proof: null,
+    proving: null,
+    proofFailure: null,
+    proofRound: 0,
   };
 }
 export function mayAct(e: Expedition) {
